@@ -16,17 +16,36 @@ photo.onchange=async()=>{const f=photo.files[0];if(!f)return;img=new Image();img
 const P=(lm,i)=>({x:lm[i].x*canvas.width,y:lm[i].y*canvas.height});
 function shape(lm,ids,color,alpha=1){ctx.save();ctx.globalAlpha=alpha;ctx.fillStyle=color;ctx.beginPath();ids.forEach((i,n)=>{const p=P(lm,i);n?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.closePath();ctx.fill();ctx.restore()}
 function stroke(lm,ids,color,w){ctx.save();ctx.strokeStyle=color;ctx.lineWidth=w;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ids.forEach((i,n)=>{const p=P(lm,i);n?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.stroke();ctx.restore()}
-function makeup(lm){const left=P(lm,33),right=P(lm,263),scale=Math.hypot(right.x-left.x,right.y-left.y),w=Math.max(2,scale*.018);
-shape(lm,[70,63,105,66,107,55,65,52,53,46],'#fff5ec',.65);
-shape(lm,[300,293,334,296,336,285,295,282,283,276],'#fff5ec',.65);
-shape(lm,[33,160,158,133,153,144],'#fff',.85);shape(lm,[263,387,385,362,380,373],'#fff',.85);
-stroke(lm,[33,160,158,133],'#181017',w*1.7);stroke(lm,[263,387,385,362],'#181017',w*1.7);
-stroke(lm,[70,63,105,66,107],'#33202c',w*2.1);stroke(lm,[300,293,334,296,336],'#33202c',w*2.1);
-for(const side of [[70,105,107,55],[300,334,336,285]]){const a=P(lm,side[0]),b=P(lm,side[2]);ctx.save();ctx.strokeStyle='#3e2932';ctx.lineWidth=w*1.65;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y-scale*.40);ctx.bezierCurveTo(a.x-scale*.04,a.y-scale*.85,b.x,b.y-scale*.8,b.x,b.y);ctx.stroke();ctx.restore()}
-shape(lm,[61,40,37,0,267,270,291,321,314,17,84,91],'#60102f',.94);
-shape(lm,[61,185,40,37,0,267,270,409,291,375,321,314,17,84,91,146],'#8a1744',.82);
-stroke(lm,[61,40,37,0,267,270,291,321,314,17,84,91,61],'#390b24',w*1.3);
-shape(lm,[50,101,118,119,100,126],'#e06499',.20);shape(lm,[280,330,347,348,329,355],'#e06499',.20);
+function makeup(lm){
+ const a=P(lm,33),b=P(lm,263),S=Math.hypot(b.x-a.x,b.y-a.y),W=Math.max(1.5,S*.011);
+ const ellipse=(x,y,rx,ry,inner,outer,alpha=1)=>{ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.scale(rx,ry);const g=ctx.createRadialGradient(0,0,.08,0,0,1);g.addColorStop(0,inner);g.addColorStop(1,outer);ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore()};
+ const curve=(points,color,width)=>{ctx.save();ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();ctx.moveTo(points[0][0],points[0][1]);for(let i=1;i<points.length;i+=3){if(points[i+2])ctx.bezierCurveTo(...points[i],...points[i+1],...points[i+2]);}ctx.stroke();ctx.restore()};
+ // Soft cheek contour and blush, blended into original skin.
+ for(const [cheek,temple] of [[P(lm,205),P(lm,127)],[P(lm,425),P(lm,356)]]){ellipse(cheek.x,cheek.y,S*.35,S*.23,'rgba(192,49,104,.35)','rgba(192,49,104,0)');ellipse(temple.x,temple.y,S*.26,S*.40,'rgba(98,45,67,.23)','rgba(98,45,67,0)')}
+ ellipse(P(lm,4).x,P(lm,4).y,S*.14,S*.38,'rgba(255,247,233,.32)','rgba(255,247,233,0)');
+ // Dramatic eyeshadow above each eye; no opaque white covering pupils.
+ for(const eye of [{outer:33,inner:133,top:159,brow:105,lower:145,wing:-1},{outer:263,inner:362,top:386,brow:334,lower:374,wing:1}]){
+  const o=P(lm,eye.outer),i=P(lm,eye.inner),t=P(lm,eye.top),br=P(lm,eye.brow);
+  const cx=(o.x+i.x)/2,cy=t.y-S*.13;
+  ellipse(cx,cy,S*.28,S*.24,'rgba(252,246,238,.88)','rgba(252,246,238,0)');
+  ellipse(o.x+(i.x-o.x)*.38,t.y-S*.07,S*.19,S*.12,'rgba(75,35,85,.48)','rgba(75,35,85,0)');
+  ctx.save();ctx.strokeStyle='#21111d';ctx.lineWidth=W*2.4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(o.x,o.y);ctx.quadraticCurveTo(cx,t.y-S*.09,i.x,i.y);ctx.stroke();ctx.restore();
+  const wingX=o.x+eye.wing*S*.13,wingY=o.y-S*.13;
+  curve([[i.x,i.y],[cx,t.y-S*.09],[o.x,o.y-S*.04],[wingX,wingY]],'#1d101a',W*2.6);
+  ellipse(cx,P(lm,eye.lower).y+S*.035,S*.19,S*.06,'rgba(246,238,244,.52)','rgba(246,238,244,0)');
+  // Tall curved graphic eyebrow, following face scale.
+  const x=br.x, y=br.y;
+  curve([[x,y+S*.035],[x-eye.wing*S*.06,y-S*.16],[x-eye.wing*S*.13,y-S*.43],[x-eye.wing*S*.10,y-S*.49]],'rgba(62,34,46,.83)',W*2.9);
+  curve([[x-eye.wing*S*.10,y-S*.49],[x-eye.wing*S*.17,y-S*.54],[o.x,y-S*.30],[o.x,y-S*.18]],'rgba(62,34,46,.83)',W*2.6);
+ }
+ // Lip colour follows the actual mouth outline; gradients add depth and shine.
+ const lip=[61,185,40,37,0,267,270,409,291,375,321,314,17,84,91,146];
+ ctx.save();ctx.beginPath();lip.forEach((id,n)=>{const p=P(lm,id);n?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y)});ctx.closePath();ctx.clip();
+ const upper=P(lm,0),lower=P(lm,17),mid=P(lm,13);
+ const g=ctx.createLinearGradient(0,upper.y,0,lower.y);g.addColorStop(0,'#390a27');g.addColorStop(.35,'#7d1847');g.addColorStop(.7,'#a93666');g.addColorStop(1,'#390d29');ctx.fillStyle=g;ctx.fillRect(0,upper.y-S*.1,canvas.width,lower.y-upper.y+S*.2);
+ ellipse(mid.x-S*.11,mid.y+S*.07,S*.16,S*.055,'rgba(255,188,207,.58)','rgba(255,188,207,0)');
+ ctx.restore();
+ stroke(lm,[...lip,61],'rgba(62,13,40,.78)',W*1.5);
 }
 apply.onclick=async()=>{if(!img)return;apply.disabled=true;status.textContent='Reconhecendo seu rosto...';try{if(!window.FaceMesh)throw Error('Biblioteca de reconhecimento não carregou.');if(!mesh){mesh=new FaceMesh({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/'+f});mesh.setOptions({maxNumFaces:1,refineLandmarks:true,minDetectionConfidence:.5})}const lm=await new Promise(async(resolve,reject)=>{const t=setTimeout(()=>reject(Error('Tempo esgotado')),20000);mesh.onResults(r=>{clearTimeout(t);resolve(r.multiFaceLandmarks?.[0])});try{await mesh.send({image:canvas})}catch(e){clearTimeout(t);reject(e)}});if(!lm)throw Error('Não encontrei um rosto. Use uma selfie de frente e bem iluminada.');ctx.drawImage(img,0,0,canvas.width,canvas.height);makeup(lm);save.disabled=false;status.textContent='Pronto! Sua versão SejaAna está disponível.'}catch(e){status.textContent='Erro: '+e.message}finally{apply.disabled=false}};
 save.onclick=()=>{const a=document.createElement('a');a.href=canvas.toDataURL('image/png');a.download='SejaAna.png';a.click()};
